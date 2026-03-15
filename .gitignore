@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+*.suo
+staging/
+*.user
+.vs/
+Releases/
+.DS_Store
+notes/
