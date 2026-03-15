@@ -2,8 +2,8 @@
 
 An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help with debugging while developing mods.
 
-<img src="Assets/screenshot.jpg" width="860" height="360">
-<img src="Assets/screenshot2.jpg" width="860" height="360">  
+<img src="https://github.com/malafein/UnityLogViewer/blob/main/Assets/screenshot.jpg" width="860" height="360">
+<img src="https://github.com/malafein/UnityLogViewer/blob/main/Assets/screenshot2.jpg" width="860" height="360">  
 
 ## Features
 
@@ -20,12 +20,12 @@ An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help wit
 ### Thunderstore / r2modman
 - Install via Thunderstore Mod Manager or r2modman.  
 -or-  
-- Download the mod from [Thunderstore](), and follow the Manual Installation instructions below.
+- Download the mod from [Thunderstore](https://thunderstore.io/c/valheim/p/malafein/UnityLogViewer/), and follow the Manual Installation instructions below.
 
 ### Nexus Mods / Vortex
 - Install via Vortex Mod Manager.  
 -or-  
-- Download the mod from [Nexus Mods](), and follow the Manual Installation instructions below.
+- Download the mod from [Nexus Mods](https://www.nexusmods.com/profile/malafein/mods), and follow the Manual Installation instructions below.
 
 ### Manual Installation
 1. Install [BepInEx 5](https://github.com/BepInEx/BepInEx) for your game.
