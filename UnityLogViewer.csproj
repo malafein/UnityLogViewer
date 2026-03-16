@@ -3,7 +3,7 @@
     <TargetFramework>net462</TargetFramework>
     <AssemblyName>UnityLogViewer</AssemblyName>
     <Description>In-game log viewer for BepInEx</Description>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

@@ -7,7 +7,7 @@ namespace UnityLogViewer
 {
     public class LogViewerUI : MonoBehaviour
     {
-        private bool isVisible;
+        private bool isVisible = Plugin.ShowWindow.Value;
         private bool isPinned;
         private Rect windowRect;
         private Vector2 scrollPosition;
@@ -96,6 +96,11 @@ namespace UnityLogViewer
             {
                 filterText = Plugin.Filter.Value ?? "";
                 filterDirty = true;
+            };
+
+            Plugin.ShowWindow.SettingChanged += (_, __) =>
+            {
+                isVisible = Plugin.ShowWindow.Value;
             };
 
             Plugin.Pinned.SettingChanged += (_, __) =>
@@ -212,7 +217,7 @@ namespace UnityLogViewer
         private void Update()
         {
             if (Plugin.ToggleShortcut.Value.IsDown())
-                isVisible = !isVisible;
+                Plugin.ShowWindow.Value = !Plugin.ShowWindow.Value;
 
             // Rebuild filtered/rendered lines here, not inside OnGUI callbacks.
             // OnLogMessageReceived can fire synchronously during OnGUI (Unity logs the
@@ -510,7 +515,7 @@ namespace UnityLogViewer
             // Close button
             if (GUI.Button(new Rect(windowRect.width - 25, 2, 22, 18), "X", closeButtonStyle))
             {
-                isVisible = false;
+                Plugin.ShowWindow.Value = false;
                 return;
             }
 

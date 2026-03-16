@@ -2,8 +2,8 @@
 
 An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help with debugging while developing mods.
 
-<img src="https://github.com/malafein/UnityLogViewer/blob/main/Assets/screenshot.jpg" width="860" height="360">
-<img src="https://github.com/malafein/UnityLogViewer/blob/main/Assets/screenshot2.jpg" width="860" height="360">  
+<img src="https://staticdelivery.nexusmods.com/mods/3667/images/3274/3274-1773619034-2033822800.jpg" width="860" height="360">
+<img src="https://staticdelivery.nexusmods.com/mods/3667/images/3274/3274-1773620222-327155299.jpg" width="860" height="360">  
 
 ## Features
 
@@ -25,7 +25,7 @@ An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help wit
 ### Nexus Mods / Vortex
 - Install via Vortex Mod Manager.  
 -or-  
-- Download the mod from [Nexus Mods](https://www.nexusmods.com/profile/malafein/mods), and follow the Manual Installation instructions below.
+- Download the mod from [Nexus Mods](https://www.nexusmods.com/valheim/mods/3274), and follow the Manual Installation instructions below.
 
 ### Manual Installation
 1. Install [BepInEx 5](https://github.com/BepInEx/BepInEx) for your game.
@@ -52,6 +52,7 @@ The config file `com.malafein.unitylogviewer.cfg` is generated in your `BepInEx/
 
 | Setting | Default | Description |
 |---|---|---|
+| ShowWindow | false | Toggle the log viewer window on/off. Use this if the hotkey doesn't work with your game's input system. |
 | ToggleShortcut | F7 | Keyboard shortcut to toggle the log viewer. |
 | Filter | *(empty)* | Persistent filter string (supports regex). |
 | FontName | *(empty)* | Font to use for log text. Leave empty for the default UI font. If valid OS fonts are detected at runtime, a selector appears in the log viewer window. **Note: font selection has not yet been tested on all platforms.** |

@@ -10,9 +10,10 @@ namespace UnityLogViewer
     {
         public const string ModGUID = "com.malafein.unitylogviewer";
         public const string ModName = "UnityLogViewer";
-        public const string ModVersion = "0.0.1";
+        public const string ModVersion = "0.0.2";
 
         public static ConfigEntry<KeyboardShortcut> ToggleShortcut;
+        public static ConfigEntry<bool> ShowWindow;
         public static ConfigEntry<string> Filter;
         public static ConfigEntry<int> BackgroundOpacity;
         public static ConfigEntry<bool> Pinned;
@@ -36,6 +37,13 @@ namespace UnityLogViewer
             Logger.LogInfo($"{ModName} {ModVersion} is loading...");
 
             // General settings (highest order = appears first)
+            ShowWindow = Config.Bind(
+                "General",
+                "ShowWindow",
+                false,
+                new ConfigDescription("Toggle the log viewer window on/off. Use this if the hotkey doesn't work with your game's input system.",
+                    null, new ConfigurationManagerAttributes { Order = 65 }));
+
             ToggleShortcut = Config.Bind(
                 "General",
                 "ToggleShortcut",
