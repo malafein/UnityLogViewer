@@ -3,14 +3,14 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using UnityEngine;
 
-namespace UnityLogViewer
+namespace malafein.UnityLogViewer
 {
     [BepInPlugin(ModGUID, ModName, ModVersion)]
     public class Plugin : BaseUnityPlugin
     {
         public const string ModGUID = "com.malafein.unitylogviewer";
         public const string ModName = "UnityLogViewer";
-        public const string ModVersion = "0.0.2";
+        public const string ModVersion = "0.0.3";
 
         public static ConfigEntry<KeyboardShortcut> ToggleShortcut;
         public static ConfigEntry<bool> ShowWindow;

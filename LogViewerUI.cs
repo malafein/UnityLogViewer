@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using BepInEx.Logging;
 
-namespace UnityLogViewer
+namespace malafein.UnityLogViewer
 {
-    public class LogViewerUI : MonoBehaviour
+    public class LogViewerUI : MonoBehaviour, ILogListener
     {
+        public LogLevel LogLevelFilter => LogLevel.All;
+        private readonly object logLock = new object();
+
         private bool isVisible = Plugin.ShowWindow.Value;
         private bool isPinned;
         private Rect windowRect;
@@ -128,7 +132,7 @@ namespace UnityLogViewer
                 if (idx >= 0) fontSelectorIndex = idx;
             };
 
-            Application.logMessageReceived += OnLogMessageReceived;
+            BepInEx.Logging.Logger.Listeners.Add(this);
         }
 
         // Probes all OS fonts using CalcSize (requires OnGUI context) to determine which
@@ -143,9 +147,9 @@ namespace UnityLogViewer
             string[] all = Font.GetOSInstalledFontNames();
             Array.Sort(all, StringComparer.OrdinalIgnoreCase);
 
-            // OnLogMessageReceived must not be subscribed during probing or any warning
+            // BepInEx log listener must be removed during probing or any warning
             // from a failing font would be captured into our log buffer and trigger a rebuild.
-            Application.logMessageReceived -= OnLogMessageReceived;
+            BepInEx.Logging.Logger.Listeners.Remove(this);
 
             foreach (string name in all)
             {
@@ -168,7 +172,7 @@ namespace UnityLogViewer
                     validFontNames.Add(name);
             }
 
-            Application.logMessageReceived += OnLogMessageReceived;
+            BepInEx.Logging.Logger.Listeners.Add(this);
 
             // Set selector to match the persisted FontName, falling back to default.
             fontSelectorIndex = Math.Max(0, validFontNames.IndexOf(Plugin.FontName.Value));
@@ -184,34 +188,28 @@ namespace UnityLogViewer
                 : "[UnityLogViewer] No usable OS fonts found; using default UI font.");
         }
 
-        private void OnLogMessageReceived(string message, string stackTrace, LogType type)
+        public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            string prefix;
-            switch (type)
+            string prefix = $"[{eventArgs.Level}] [{eventArgs.Source.SourceName}] ";
+
+            lock (logLock)
             {
-                case LogType.Error:
-                case LogType.Exception:
-                    prefix = "[ERROR] ";
-                    break;
-                case LogType.Warning:
-                    prefix = "[WARNING] ";
-                    break;
-                default:
-                    prefix = "";
-                    break;
+                logLines.Add(prefix + eventArgs.Data);
+
+                if (logLines.Count > MaxLines)
+                {
+                    logLines.RemoveRange(0, logLines.Count - MaxLines);
+                }
+
+                filterDirty = true;
+
+                if (autoScroll)
+                    pendingScrollToBottom = true;
             }
+        }
 
-            logLines.Add(prefix + message);
-
-            if (logLines.Count > MaxLines)
-            {
-                logLines.RemoveRange(0, logLines.Count - MaxLines);
-            }
-
-            filterDirty = true;
-
-            if (autoScroll)
-                pendingScrollToBottom = true;
+        public void Dispose()
+        {
         }
 
         private void Update()
@@ -264,31 +262,36 @@ namespace UnityLogViewer
         private void RebuildFilteredLines()
         {
             filteredLines.Clear();
-            if (string.IsNullOrEmpty(filterText))
+
+            lock (logLock)
             {
-                filteredLines.AddRange(logLines);
-            }
-            else
-            {
-                try
+                if (string.IsNullOrEmpty(filterText))
                 {
-                    var regex = new Regex(filterText, RegexOptions.IgnoreCase);
-                    for (int i = 0; i < logLines.Count; i++)
+                    filteredLines.AddRange(logLines);
+                }
+                else
+                {
+                    try
                     {
-                        if (regex.IsMatch(logLines[i]))
-                            filteredLines.Add(logLines[i]);
+                        var regex = new Regex(filterText, RegexOptions.IgnoreCase);
+                        for (int i = 0; i < logLines.Count; i++)
+                        {
+                            if (regex.IsMatch(logLines[i]))
+                                filteredLines.Add(logLines[i]);
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        for (int i = 0; i < logLines.Count; i++)
+                        {
+                            if (logLines[i].IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0)
+                                filteredLines.Add(logLines[i]);
+                        }
                     }
                 }
-                catch (ArgumentException)
-                {
-                    for (int i = 0; i < logLines.Count; i++)
-                    {
-                        if (logLines[i].IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0)
-                            filteredLines.Add(logLines[i]);
-                    }
-                }
+                filterDirty = false;
             }
-            filterDirty = false;
+
             renderDirty = true;
         }
 
@@ -316,9 +319,16 @@ namespace UnityLogViewer
             {
                 string escaped = EscapeRichText(filteredLines[i]);
                 string color = GetColorForLine(filteredLines[i]);
-                renderedLines.Add(color != null
-                    ? "<color=" + color + ">" + escaped + "</color>"
-                    : escaped);
+
+                // Split by newline so virtual scroll logic counts it accurately.
+                string[] lines = escaped.Split('\n');
+                for (int j = 0; j < lines.Length; j++)
+                {
+                    string line = lines[j].TrimEnd('\r');
+                    renderedLines.Add(color != null
+                        ? "<color=" + color + ">" + line + "</color>"
+                        : line);
+                }
             }
             renderDirty = false;
         }
@@ -449,8 +459,11 @@ namespace UnityLogViewer
             int totalLines = renderedLines.Count;
             float totalContentHeight = totalLines * lh;
 
-            // Clamp before GUILayout sees it.
-            scrollPosition.y = Mathf.Min(scrollPosition.y, Mathf.Max(0f, totalContentHeight - viewHeight));
+            // Clamp before GUILayout sees it, adding a buffer to allow room for the
+            // horizontal scrollbar and minor view padding. Unity's internal scroll
+            // view will perform the final pixel-perfect clamp.
+            float clampMax = Mathf.Max(0f, totalContentHeight - viewHeight + 30f);
+            scrollPosition.y = Mathf.Min(scrollPosition.y, clampMax);
 
             // Compute the visible range ONLY during Layout and cache it.
             // GUILayout.BeginScrollView can modify scrollPosition.y during Layout (internal
@@ -571,7 +584,10 @@ namespace UnityLogViewer
             // Clear clears the log buffer
             if (GUILayout.Button("Clear", GUILayout.Width(50)))
             {
-                logLines.Clear();
+                lock (logLock)
+                {
+                    logLines.Clear();
+                }
                 filteredLines.Clear();
                 renderedLines.Clear();
                 scrollPosition = Vector2.zero;
@@ -580,7 +596,12 @@ namespace UnityLogViewer
 
             // Info row
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{filteredLines.Count} / {logLines.Count} lines", GUILayout.Width(150));
+            int totalLinesCount;
+            lock (logLock)
+            {
+                totalLinesCount = logLines.Count;
+            }
+            GUILayout.Label($"{filteredLines.Count} / {totalLinesCount} lines", GUILayout.Width(150));
             GUILayout.FlexibleSpace();
             bool newAutoScroll = GUILayout.Toggle(autoScroll, "Auto-scroll");
             if (newAutoScroll != autoScroll)
@@ -662,7 +683,7 @@ namespace UnityLogViewer
 
         private void OnDestroy()
         {
-            Application.logMessageReceived -= OnLogMessageReceived;
+            BepInEx.Logging.Logger.Listeners.Remove(this);
             if (bgTexture != null) Destroy(bgTexture);
         }
     }
