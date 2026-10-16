@@ -10,7 +10,7 @@ namespace malafein.UnityLogViewer
     {
         public const string ModGUID = "com.malafein.unitylogviewer";
         public const string ModName = "UnityLogViewer";
-        public const string ModVersion = "0.0.3";
+        public const string ModVersion = "0.0.4";
 
         public static ConfigEntry<KeyboardShortcut> ToggleShortcut;
         public static ConfigEntry<bool> ShowWindow;

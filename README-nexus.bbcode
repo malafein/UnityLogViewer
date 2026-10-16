@@ -1,0 +1,110 @@
+[size=5][b]UnityLogViewer[/b][/size]
+
+An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help with debugging while developing mods.
+
+[line]
+
+[size=4][b]Features[/b][/size]
+
+[list]
+[*]Real-time in-game log overlay showing the BepInEx log: every mod's output plus Unity's own
+[*]Draggable, resizable window
+[*]Live text filter with regex support
+[*]Auto-scroll to keep up with new log entries
+[*]Pin mode to lock the window in place and hide decorations for an unobtrusive heads-up display
+[*]Configurable syntax highlighting with 8 color-coded regex rules (errors, warnings, debug, etc.)
+[*]Adjustable background opacity
+[*]Font selector with a preview of each font, where the game can load the system's fonts
+[/list]
+
+Tested with Valheim 1.0 and PEAK. It should work in other Unity games that run BepInEx 5 (Mono builds of Unity 2018 or later), but hasn't been tested in them yet.
+
+[line]
+
+[size=4][b]Installation[/b][/size]
+
+[size=3][b]Nexus Mods / Vortex[/b][/size]
+[list]
+[*]Install via Vortex Mod Manager.
+[*]-or- Download the mod from the Files tab above, and follow the Manual Installation instructions below.
+[/list]
+
+[size=3][b]Thunderstore / r2modman[/b][/size]
+[list]
+[*]Install via Thunderstore Mod Manager or r2modman.
+[*]-or- Download the mod from Thunderstore ([url=https://thunderstore.io/c/valheim/p/malafein/UnityLogViewer/]Valheim[/url], [url=https://thunderstore.io/c/peak/p/malafein/UnityLogViewer/]PEAK[/url]), and follow the Manual Installation instructions below.
+[/list]
+
+[size=3][b]Manual Installation[/b][/size]
+[list=1]
+[*]Install [url=https://github.com/BepInEx/BepInEx]BepInEx 5[/url] for your game.
+[*]Download the latest release of UnityLogViewer from [url=https://github.com/malafein/UnityLogViewer/releases]GitHub[/url].
+[*]Extract the contents of the zip's plugins folder (UnityLogViewer.dll) into your game's BepInEx\plugins folder.
+[/list]
+
+[line]
+
+[size=4][b]Usage[/b][/size]
+
+Press [b]F7[/b] (default) to toggle the log viewer window. The window displays the most recent log output (500 lines by default, configurable via BufferSize).
+
+[list]
+[*][b]Filter[/b] — Type in the filter bar to show only matching lines. Supports regular expressions; falls back to plain text search if the regex is invalid.
+[*][b]×[/b] — Clears the current filter.
+[*][b]Clear[/b] — Clears the current buffer.
+[*][b]Auto-scroll[/b] — When enabled (default), the view automatically scrolls to the latest log entry. Toggle it off to freeze the view and scroll manually.
+[*][b]Pin[/b] — Click the pin button in the title bar to lock the window in place. Pinned mode hides the title bar, filter bar, and resize handle, leaving only the log text over a transparent background. Click the unpin button in the top-right corner to restore the full window.
+[*][b]Resize[/b] — Drag the handle in the bottom-right corner of the window to resize.
+[*][b]Drag[/b] — Drag the title bar to reposition the window.
+[*][b]Font[/b] — Shown when the game can load fonts installed on your system. Click it to list them, each with a sample line; pick one to switch the log text to it, or click the Font button again to close the list.
+[/list]
+
+[line]
+
+[size=4][b]Configuration[/b][/size]
+
+The config file com.malafein.unitylogviewer.cfg is generated in your BepInEx\config folder after the first run. Settings can also be changed in-game via [url=https://github.com/BepInEx/BepInEx.ConfigurationManager]Configuration Manager[/url].
+
+[size=3][b]General[/b][/size]
+[list]
+[*][b]ShowWindow[/b] (default: false) — Toggle the log viewer window on/off. Use this if the hotkey doesn't work with your game's input system.
+[*][b]ToggleShortcut[/b] (default: F7) — Keyboard shortcut to toggle the log viewer.
+[*][b]Filter[/b] (default: empty) — Persistent filter string (supports regex).
+[*][b]FontName[/b] (default: empty) — Font to use for log text. Leave empty for the default UI font. If the game can load fonts installed on your system, a selector appears in the log viewer window. Windows builds (including under Proton) usually can; native Linux builds of Unity games usually find none.
+[*][b]BackgroundOpacity[/b] (default: 80) — Background opacity of the log window (0–100).
+[*][b]Pinned[/b] (default: false) — Pin the log view in place, hiding window decorations and disabling interaction.
+[*][b]BufferSize[/b] (default: 500) — Maximum number of log lines to keep in the buffer (100–5000).
+[/list]
+
+[size=3][b]Window[/b][/size]
+
+These values are saved automatically when you finish moving or resizing the window, so your preferred layout is preserved between sessions. The window is kept on screen, so a layout saved on a larger monitor is pulled back into view.
+[list]
+[*][b]WindowX[/b] (default: 40) — Horizontal position of the window (pixels from left).
+[*][b]WindowY[/b] (default: 40) — Vertical position of the window (pixels from top).
+[*][b]WindowWidth[/b] (default: 900) — Width of the window in pixels.
+[*][b]WindowHeight[/b] (default: 300) — Height of the window in pixels.
+[/list]
+
+[size=3][b]Highlighting[/b][/size]
+
+Eight configurable highlight slots let you color-code log lines by pattern. Each slot has a pattern and a color setting. The first matching rule wins.
+[list]
+[*][b]Highlight1[/b] — pattern \[ERROR\]|\[FATAL\], color red
+[*][b]Highlight2[/b] — pattern \[WARNING\], color yellow
+[*][b]Highlight3[/b] — pattern \[DEBUG\]|\[DBG\], color cyan
+[*][b]Highlight4[/b] — pattern \[INFO\], color white
+[*][b]Highlight5–8[/b] — empty, available for custom rules
+[/list]
+
+Colors can be specified as a named color (red, yellow, cyan, green, blue, magenta, orange, white) or a hex value (#RRGGBB). A rule with an unrecognized color is skipped, with a warning in the log.
+
+[line]
+
+[size=4][b]Changelog[/b][/size]
+
+See the [url=https://github.com/malafein/UnityLogViewer/blob/main/CHANGELOG.md]changelog on GitHub[/url].
+
+[size=4][b]Bugs & Known Issues[/b][/size]
+
+Feel free to log any issues you encounter while using this mod on [url=https://github.com/malafein/UnityLogViewer/issues]GitHub[/url].

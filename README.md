@@ -7,20 +7,23 @@ An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help wit
 
 ## Features
 
-- Real-time in-game log overlay showing Unity log output
+- Real-time in-game log overlay showing the BepInEx log: every mod's output plus Unity's own
 - Draggable, resizable window
 - Live text filter with regex support
 - Auto-scroll to keep up with new log entries
 - Pin mode to lock the window in place and hide decorations for an unobtrusive heads-up display
 - Configurable syntax highlighting with 8 color-coded regex rules (errors, warnings, debug, etc.)
 - Adjustable background opacity
+- Font selector with a preview of each font, where the game can load the system's fonts
+
+Tested with Valheim 1.0 and PEAK. It should work in other Unity games that run BepInEx 5 (Mono builds of Unity 2018 or later), but hasn't been tested in them yet.
 
 ## Installation
 
 ### Thunderstore / r2modman
 - Install via Thunderstore Mod Manager or r2modman.  
 -or-  
-- Download the mod from [Thunderstore](https://thunderstore.io/c/valheim/p/malafein/UnityLogViewer/), and follow the Manual Installation instructions below.
+- Download the mod from Thunderstore ([Valheim](https://thunderstore.io/c/valheim/p/malafein/UnityLogViewer/), [PEAK](https://thunderstore.io/c/peak/p/malafein/UnityLogViewer/)), and follow the Manual Installation instructions below.
 
 ### Nexus Mods / Vortex
 - Install via Vortex Mod Manager.  
@@ -29,8 +32,8 @@ An in-game log viewer overlay for any BepInEx 5 Unity game, designed to help wit
 
 ### Manual Installation
 1. Install [BepInEx 5](https://github.com/BepInEx/BepInEx) for your game.
-2. Download the latest release of UnityLogViewer.
-3. Extract the `UnityLogViewer.dll` file into your `BepInEx/plugins` directory.
+2. Download the latest release of UnityLogViewer from [GitHub](https://github.com/malafein/UnityLogViewer/releases).
+3. Extract the contents of the zip's `plugins` folder (`UnityLogViewer.dll`) into your `BepInEx/plugins` directory.
 
 ## Usage
 
@@ -43,6 +46,7 @@ Press **F7** (default) to toggle the log viewer window. The window displays the 
 - **Pin** — Click the pin button in the title bar to lock the window in place. Pinned mode hides the title bar, filter bar, and resize handle, leaving only the log text over a transparent background. Click the unpin button in the top-right corner to restore the full window.
 - **Resize** — Drag the handle in the bottom-right corner of the window to resize.
 - **Drag** — Drag the title bar to reposition the window.
+- **Font** — Shown when the game can load fonts installed on your system. Click it to list them, each with a sample line; pick one to switch the log text to it, or click the Font button again to close the list.
 
 ## Configuration
 
@@ -55,7 +59,7 @@ The config file `com.malafein.unitylogviewer.cfg` is generated in your `BepInEx/
 | ShowWindow | false | Toggle the log viewer window on/off. Use this if the hotkey doesn't work with your game's input system. |
 | ToggleShortcut | F7 | Keyboard shortcut to toggle the log viewer. |
 | Filter | *(empty)* | Persistent filter string (supports regex). |
-| FontName | *(empty)* | Font to use for log text. Leave empty for the default UI font. If valid OS fonts are detected at runtime, a selector appears in the log viewer window. **Note: font selection has not yet been tested on all platforms.** |
+| FontName | *(empty)* | Font to use for log text. Leave empty for the default UI font. If the game can load fonts installed on your system, a selector appears in the log viewer window. Windows builds (including under Proton) usually can; native Linux builds of Unity games usually find none. |
 | BackgroundOpacity | 80 | Background opacity of the log window (0–100). |
 | Pinned | false | Pin the log view in place, hiding window decorations and disabling interaction. |
 | BufferSize | 500 | Maximum number of log lines to keep in the buffer (100–5000). |
