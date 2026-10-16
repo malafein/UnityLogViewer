@@ -88,11 +88,14 @@ namespace malafein.UnityLogViewer
         private readonly List<string> validFontNames = new List<string>();
         private int fontSelectorIndex;
 
-        // Font dropdown popup state
-        private bool fontDropdownOpen;
-        private Rect fontDropdownRect;
-        private Vector2 fontDropdownScrollPos;
-        private const int FontDropdownWindowID = 99702;
+        // Font list, drawn inside the main window in place of the log while open. A separate
+        // popup window never showed in PEAK (IMGUI window stacking). Opening, closing and
+        // applying a font are requested from OnGUI and done in Update(), so the layout doesn't
+        // change between the Layout and Repaint passes of a frame.
+        private bool fontListOpen;
+        private bool fontListToggleRequested;
+        private int pendingFontIndex = -1;
+        private Vector2 fontListScrollPos;
 
         private void Awake()
         {
@@ -240,7 +243,25 @@ namespace malafein.UnityLogViewer
 
             // Nothing below is visible while hidden; the dirty flags stay set, so the
             // rebuild happens on the first frame after the window is shown again.
-            if (!isVisible) return;
+            if (!isVisible)
+            {
+                fontListOpen = false;
+                fontListToggleRequested = false;
+                return;
+            }
+
+            if (fontListToggleRequested)
+            {
+                fontListOpen = !fontListOpen;
+                fontListToggleRequested = false;
+            }
+
+            if (pendingFontIndex >= 0)
+            {
+                ApplyFont(pendingFontIndex);
+                pendingFontIndex = -1;
+                fontListOpen = false;
+            }
 
             if (clearRequested)
             {
@@ -462,7 +483,6 @@ namespace malafein.UnityLogViewer
         {
             if (!isVisible)
             {
-                fontDropdownOpen = false;
                 return;
             }
             if (!stylesInitialized) InitStyles();
@@ -487,10 +507,6 @@ namespace malafein.UnityLogViewer
             }
 
             SaveWindowRectIfChanged();
-
-            // Draw dropdown on top of everything else (after main window).
-            if (fontDropdownOpen)
-                DrawFontDropdown();
         }
 
         // Keeps the whole window on screen, e.g. after a resolution change or with a saved
@@ -625,23 +641,9 @@ namespace malafein.UnityLogViewer
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Font:", GUILayout.Width(40));
                 string displayName = fontSelectorIndex > 0 ? validFontNames[fontSelectorIndex] : "(default)";
-                if (GUILayout.Button(displayName + " \u25bc", GUILayout.ExpandWidth(true)))
-                {
-                    fontDropdownOpen = !fontDropdownOpen;
-                    if (fontDropdownOpen)
-                    {
-                        // btnRect is window-content-local; convert to screen space by adding
-                        // the window's origin and the title bar height (window.border.top).
-                        Rect btnRect = GUILayoutUtility.GetLastRect();
-                        float titleH = GUI.skin.window.border.top;
-                        float dropH = Mathf.Min(validFontNames.Count * 22f + 6f, 200f);
-                        fontDropdownRect = new Rect(
-                            windowRect.x + btnRect.x,
-                            windowRect.y + titleH + btnRect.yMax,
-                            btnRect.width,
-                            dropH);
-                    }
-                }
+                string arrow = fontListOpen ? " \u25b2" : " \u25bc";
+                if (GUILayout.Button(displayName + arrow, GUILayout.ExpandWidth(true)))
+                    fontListToggleRequested = true;
                 GUILayout.EndHorizontal();
             }
 
@@ -654,8 +656,8 @@ namespace malafein.UnityLogViewer
                 filterText = newFilter;
                 filterDirty = true;
             }
-            // ⌫ clears the filter text
-            if (GUILayout.Button("\u232b", GUILayout.Width(28)))
+            // × clears the filter text (Latin-1, so every UI font has it; ⌫ didn't render in PEAK)
+            if (GUILayout.Button("\u00d7", GUILayout.Width(28)))
             {
                 filterText = "";
                 filterDirty = true;
@@ -683,7 +685,11 @@ namespace malafein.UnityLogViewer
             GUILayout.EndHorizontal();
 
             float headerH = validFontNames.Count > 1 ? WindowHeaderHeight : WindowHeaderHeight - 26f;
-            DrawVirtualScrollContent(Mathf.Max(50f, windowRect.height - headerH));
+            float viewHeight = Mathf.Max(50f, windowRect.height - headerH);
+            if (fontListOpen)
+                DrawFontList(viewHeight);
+            else
+                DrawVirtualScrollContent(viewHeight);
 
             // Resize handle
             GUI.Label(new Rect(
@@ -696,30 +702,16 @@ namespace malafein.UnityLogViewer
             GUI.DragWindow(new Rect(0, 0, windowRect.width - 58, 25));
         }
 
-        private void DrawFontDropdown()
+        private void DrawFontList(float viewHeight)
         {
-            // Close when clicking outside the dropdown window.
-            if (Event.current.type == EventType.MouseDown &&
-                !fontDropdownRect.Contains(Event.current.mousePosition))
+            fontListScrollPos = GUILayout.BeginScrollView(fontListScrollPos, GUILayout.Height(viewHeight));
+            for (int i = 0; i < validFontNames.Count; i++)
             {
-                fontDropdownOpen = false;
-                return;
+                string label = i == 0 ? "(default)" : validFontNames[i];
+                if (GUILayout.Button(label, GUILayout.ExpandWidth(true)))
+                    pendingFontIndex = i;
             }
-
-            fontDropdownRect = GUI.Window(FontDropdownWindowID, fontDropdownRect, id =>
-            {
-                fontDropdownScrollPos = GUILayout.BeginScrollView(fontDropdownScrollPos);
-                for (int i = 0; i < validFontNames.Count; i++)
-                {
-                    string label = i == 0 ? "(default)" : validFontNames[i];
-                    if (GUILayout.Button(label, GUILayout.ExpandWidth(true)))
-                    {
-                        ApplyFont(i);
-                        fontDropdownOpen = false;
-                    }
-                }
-                GUILayout.EndScrollView();
-            }, "");
+            GUILayout.EndScrollView();
         }
 
         private void HandleResize()
