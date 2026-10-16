@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 
 namespace malafein.UnityLogViewer
@@ -30,6 +31,15 @@ namespace malafein.UnityLogViewer
         // Compiled highlight rules (rebuilt when config changes)
         private readonly List<HighlightRule> highlightRules = new List<HighlightRule>();
         private bool highlightsDirty = true;
+
+        // Invalid highlight colours are reported once the value has stopped changing:
+        // Configuration Manager sets the entry on every keystroke. Checked at startup too.
+        private const float ColorCheckDelay = 1f;
+        private float colorCheckAt;
+
+        // Set by the Clear button, applied in Update(): clearing inside OnGUI would change
+        // renderedLines between the Layout and Repaint passes of the same frame.
+        private bool clearRequested;
 
         private int MaxLines => Plugin.BufferSize.Value;
         private const int WindowID = 99701;
@@ -120,7 +130,12 @@ namespace malafein.UnityLogViewer
             for (int i = 0; i < Plugin.HighlightSlotCount; i++)
             {
                 Plugin.HighlightPattern[i].SettingChanged += (_, __) => { highlightsDirty = true; renderDirty = true; };
-                Plugin.HighlightColor[i].SettingChanged += (_, __) => { highlightsDirty = true; renderDirty = true; };
+                Plugin.HighlightColor[i].SettingChanged += (_, __) =>
+                {
+                    highlightsDirty = true;
+                    renderDirty = true;
+                    colorCheckAt = Time.unscaledTime + ColorCheckDelay;
+                };
             }
 
             // FontName changes from an external config editor: sync the selector index.
@@ -217,6 +232,28 @@ namespace malafein.UnityLogViewer
             if (Plugin.ToggleShortcut.Value.IsDown())
                 Plugin.ShowWindow.Value = !Plugin.ShowWindow.Value;
 
+            if (colorCheckAt >= 0f && Time.unscaledTime >= colorCheckAt)
+            {
+                colorCheckAt = -1f;
+                WarnInvalidHighlightColors();
+            }
+
+            // Nothing below is visible while hidden; the dirty flags stay set, so the
+            // rebuild happens on the first frame after the window is shown again.
+            if (!isVisible) return;
+
+            if (clearRequested)
+            {
+                lock (logLock)
+                {
+                    logLines.Clear();
+                }
+                filteredLines.Clear();
+                renderedLines.Clear();
+                scrollPosition = Vector2.zero;
+                clearRequested = false;
+            }
+
             // Rebuild filtered/rendered lines here, not inside OnGUI callbacks.
             // OnLogMessageReceived can fire synchronously during OnGUI (Unity logs the
             // GUILayout exception, which triggers our callback, which sets filterDirty).
@@ -240,8 +277,11 @@ namespace malafein.UnityLogViewer
             for (int i = 0; i < Plugin.HighlightSlotCount; i++)
             {
                 string pattern = Plugin.HighlightPattern[i].Value;
-                string color = Plugin.HighlightColor[i].Value;
+                string color = Plugin.HighlightColor[i].Value?.Trim();
                 if (string.IsNullOrEmpty(pattern) || string.IsNullOrEmpty(color)) continue;
+
+                // An unknown colour would show the raw <color=...> tag in every matching line.
+                if (!IsValidColor(color)) continue;
 
                 try
                 {
@@ -257,6 +297,22 @@ namespace malafein.UnityLogViewer
                 }
             }
             highlightsDirty = false;
+        }
+
+        private static bool IsValidColor(string color)
+        {
+            return ColorUtility.TryParseHtmlString(color, out _);
+        }
+
+        private void WarnInvalidHighlightColors()
+        {
+            for (int i = 0; i < Plugin.HighlightSlotCount; i++)
+            {
+                string color = Plugin.HighlightColor[i].Value?.Trim();
+                if (string.IsNullOrEmpty(color) || string.IsNullOrEmpty(Plugin.HighlightPattern[i].Value)) continue;
+                if (!IsValidColor(color))
+                    Plugin.Log.LogWarning($"Highlight{i + 1}Color \"{color}\" isn't a known colour name or #RRGGBB; rule skipped.");
+            }
         }
 
         private void RebuildFilteredLines()
@@ -297,7 +353,9 @@ namespace malafein.UnityLogViewer
 
         private static string EscapeRichText(string text)
         {
-            return text.Replace("<", "\u200B<");
+            // The zero-width space must sit between '<' and the tag name; before the '<'
+            // the tag still parses.
+            return text.Replace("<", "<\u200B");
         }
 
         private string GetColorForLine(string line)
@@ -410,6 +468,7 @@ namespace malafein.UnityLogViewer
             if (!stylesInitialized) InitStyles();
 
             UpdateBgTexture();
+            ClampToScreen();
 
             if (isPinned)
             {
@@ -420,7 +479,8 @@ namespace malafein.UnityLogViewer
                 Color prevBg = GUI.backgroundColor;
                 float alpha = Plugin.BackgroundOpacity.Value / 100f;
                 GUI.backgroundColor = new Color(prevBg.r, prevBg.g, prevBg.b, alpha);
-                GUI.Window(WindowID, windowRect, DrawWindow, "Log Viewer");
+                // GUI.DragWindow moves the window by returning the new rect from GUI.Window.
+                windowRect = GUI.Window(WindowID, windowRect, DrawWindow, "Log Viewer");
                 GUI.backgroundColor = prevBg;
 
                 HandleResize();
@@ -433,15 +493,34 @@ namespace malafein.UnityLogViewer
                 DrawFontDropdown();
         }
 
+        // Keeps the whole window on screen, e.g. after a resolution change or with a saved
+        // layout from a larger monitor. Shrinks only when the window is larger than the screen.
+        private void ClampToScreen()
+        {
+            windowRect.width = Mathf.Min(windowRect.width, Screen.width);
+            windowRect.height = Mathf.Min(windowRect.height, Screen.height);
+            windowRect.x = Mathf.Clamp(windowRect.x, 0f, Screen.width - windowRect.width);
+            windowRect.y = Mathf.Clamp(windowRect.y, 0f, Screen.height - windowRect.height);
+        }
+
+        // Saves once a drag or resize ends rather than every frame of it: each config set
+        // writes the .cfg to disk and fires SettingChanged.
         private void SaveWindowRectIfChanged()
         {
+            if (isResizing || GUIUtility.hotControl != 0) return;
+
             if (windowRect.x != lastSavedRect.x || windowRect.y != lastSavedRect.y ||
                 windowRect.width != lastSavedRect.width || windowRect.height != lastSavedRect.height)
             {
+                ConfigFile config = Plugin.WindowX.ConfigFile;
+                bool saveOnSet = config.SaveOnConfigSet;
+                config.SaveOnConfigSet = false;
                 Plugin.WindowX.Value = (int)windowRect.x;
                 Plugin.WindowY.Value = (int)windowRect.y;
                 Plugin.WindowWidth.Value = (int)windowRect.width;
                 Plugin.WindowHeight.Value = (int)windowRect.height;
+                config.SaveOnConfigSet = saveOnSet;
+                config.Save();
                 lastSavedRect = windowRect;
             }
         }
@@ -583,15 +662,7 @@ namespace malafein.UnityLogViewer
             }
             // Clear clears the log buffer
             if (GUILayout.Button("Clear", GUILayout.Width(50)))
-            {
-                lock (logLock)
-                {
-                    logLines.Clear();
-                }
-                filteredLines.Clear();
-                renderedLines.Clear();
-                scrollPosition = Vector2.zero;
-            }
+                clearRequested = true;
             GUILayout.EndHorizontal();
 
             // Info row

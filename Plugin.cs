@@ -90,13 +90,13 @@ namespace malafein.UnityLogViewer
                     new ConfigurationManagerAttributes { Order = 10 }));
 
             // Window position/size
-            WindowX = Config.Bind("Window", "WindowX", 833,
+            WindowX = Config.Bind("Window", "WindowX", 40,
                 new ConfigDescription("Horizontal position of the log viewer window.",
                     null, new ConfigurationManagerAttributes { Order = 40 }));
-            WindowY = Config.Bind("Window", "WindowY", 1019,
+            WindowY = Config.Bind("Window", "WindowY", 40,
                 new ConfigDescription("Vertical position of the log viewer window.",
                     null, new ConfigurationManagerAttributes { Order = 30 }));
-            WindowWidth = Config.Bind("Window", "WindowWidth", 1507,
+            WindowWidth = Config.Bind("Window", "WindowWidth", 900,
                 new ConfigDescription("Width of the log viewer window.",
                     null, new ConfigurationManagerAttributes { Order = 20 }));
             WindowHeight = Config.Bind("Window", "WindowHeight", 300,
@@ -104,7 +104,7 @@ namespace malafein.UnityLogViewer
                     null, new ConfigurationManagerAttributes { Order = 10 }));
 
             // Highlight rules (pattern before color for each slot)
-            string[] defaultPatterns = { @"\[ERROR\]", @"\[WARNING\]", @"\[DEBUG\]|\[DBG\]", @"\[INFO\]", "", "", "", "" };
+            string[] defaultPatterns = { @"\[ERROR\]|\[FATAL\]", @"\[WARNING\]", @"\[DEBUG\]|\[DBG\]", @"\[INFO\]", "", "", "", "" };
             string[] defaultColors = { "red", "yellow", "cyan", "white", "", "", "", "" };
 
             for (int i = 0; i < HighlightSlotCount; i++)
@@ -123,7 +123,7 @@ namespace malafein.UnityLogViewer
                     "Highlighting",
                     $"Highlight{slot}Color",
                     defaultColors[i],
-                    new ConfigDescription($"Color for highlight rule {slot} (e.g. red, yellow, cyan, green, blue, magenta, orange, white, or #RRGGBB hex).",
+                    new ConfigDescription($"Color for highlight rule {slot} (e.g. red, yellow, cyan, green, blue, magenta, orange, white, or #RRGGBB hex). Rules with an unknown color are skipped.",
                         null, new ConfigurationManagerAttributes { Order = order - 1 }));
             }
 

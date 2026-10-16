@@ -56,19 +56,19 @@ The config file `com.malafein.unitylogviewer.cfg` is generated in your `BepInEx/
 | ToggleShortcut | F7 | Keyboard shortcut to toggle the log viewer. |
 | Filter | *(empty)* | Persistent filter string (supports regex). |
 | FontName | *(empty)* | Font to use for log text. Leave empty for the default UI font. If valid OS fonts are detected at runtime, a selector appears in the log viewer window. **Note: font selection has not yet been tested on all platforms.** |
-| BackgroundOpacity | 40 | Background opacity of the log window (0–100). |
+| BackgroundOpacity | 80 | Background opacity of the log window (0–100). |
 | Pinned | false | Pin the log view in place, hiding window decorations and disabling interaction. |
 | BufferSize | 500 | Maximum number of log lines to keep in the buffer (100–5000). |
 
 ### Window
 
-These values are saved and updated automatically whenever you move or resize the window, so your preferred layout is preserved between sessions.
+These values are saved automatically when you finish moving or resizing the window, so your preferred layout is preserved between sessions. The window is kept on screen, so a layout saved on a larger monitor is pulled back into view.
 
 | Setting | Default | Description |
 |---|---|---|
-| WindowX | 833 | Horizontal position of the window (pixels from left). |
-| WindowY | 1019 | Vertical position of the window (pixels from top). |
-| WindowWidth | 1507 | Width of the window in pixels. |
+| WindowX | 40 | Horizontal position of the window (pixels from left). |
+| WindowY | 40 | Vertical position of the window (pixels from top). |
+| WindowWidth | 900 | Width of the window in pixels. |
 | WindowHeight | 300 | Height of the window in pixels. |
 
 ### Highlighting
@@ -77,7 +77,7 @@ Eight configurable highlight slots let you color-code log lines by pattern. Each
 
 | Setting | Default | Description |
 |---|---|---|
-| Highlight1Pattern | `\[ERROR\]` | Regex pattern for highlight rule 1. |
+| Highlight1Pattern | `\[ERROR\]\|\[FATAL\]` | Regex pattern for highlight rule 1. |
 | Highlight1Color | red | Color for highlight rule 1. |
 | Highlight2Pattern | `\[WARNING\]` | Regex pattern for highlight rule 2. |
 | Highlight2Color | yellow | Color for highlight rule 2. |
@@ -87,7 +87,7 @@ Eight configurable highlight slots let you color-code log lines by pattern. Each
 | Highlight4Color | white | Color for highlight rule 4. |
 | Highlight5–8 | *(empty)* | Additional slots available for custom rules. |
 
-Colors can be specified as a named color (red, yellow, cyan, green, blue, magenta, orange, white) or a hex value (#RRGGBB).
+Colors can be specified as a named color (red, yellow, cyan, green, blue, magenta, orange, white) or a hex value (#RRGGBB). A rule with an unrecognized color is skipped, with a warning in the log.
 
 ## Changelog
 

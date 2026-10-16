@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net462</TargetFramework>
+    <!-- netstandard2.0: loads in any Mono Unity game from 2018.1 on (they ship netstandard.dll).
+         Compiled against Unity 2019.4 so newer-only Unity APIs cannot slip in. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>UnityLogViewer</AssemblyName>
     <Description>In-game log viewer for BepInEx</Description>
     <Version>0.0.3</Version>
