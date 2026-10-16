@@ -86,6 +86,17 @@ namespace malafein.UnityLogViewer
         // Font selector — built in InitStyles() using CalcSize probes in OnGUI context.
         // validFontNames[0] is always "" (the default GUI skin font).
         private readonly List<string> validFontNames = new List<string>();
+        // The probed Font objects, parallel to validFontNames ([0] = null, the skin font).
+        private readonly List<Font> validFonts = new List<Font>();
+        // Font list rows: the name in the skin font (symbol fonts can't spell their own name)
+        // and a sample in the font itself, on solid textures: the skin's button image is
+        // see-through in some games (PEAK), and BackgroundOpacity tints it further.
+        private const string FontSample = "[Info] AaBbCc 0123 {}[]";
+        private readonly List<GUIStyle> fontSampleStyles = new List<GUIStyle>();
+        private GUIStyle fontRowStyle;
+        private GUIStyle fontNameStyle;
+        private Texture2D fontRowTexture;
+        private Texture2D fontRowHoverTexture;
         private int fontSelectorIndex;
 
         // Font list, drawn inside the main window in place of the log while open. A separate
@@ -161,6 +172,8 @@ namespace malafein.UnityLogViewer
         {
             validFontNames.Clear();
             validFontNames.Add("");  // index 0 = default GUI skin font
+            validFonts.Clear();
+            validFonts.Add(null);
 
             string[] all = Font.GetOSInstalledFontNames();
             Array.Sort(all, StringComparer.OrdinalIgnoreCase);
@@ -187,7 +200,10 @@ namespace malafein.UnityLogViewer
                 Application.logMessageReceived -= probe;
 
                 if (!warned)
+                {
                     validFontNames.Add(name);
+                    validFonts.Add(font);
+                }
             }
 
             BepInEx.Logging.Logger.Listeners.Add(this);
@@ -412,6 +428,14 @@ namespace malafein.UnityLogViewer
             renderDirty = false;
         }
 
+        private static Texture2D MakeSolidTexture(Color32 color)
+        {
+            var tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, color);
+            tex.Apply();
+            return tex;
+        }
+
         private Texture2D MakeBgTexture(int opacity)
         {
             byte alpha = (byte)(opacity * 255 / 100);
@@ -426,9 +450,6 @@ namespace malafein.UnityLogViewer
             // Must run before logStyle is created so CalcSize probes use the correct skin.
             BuildValidFontList();
 
-            string selectedFont = fontSelectorIndex > 0 && fontSelectorIndex < validFontNames.Count
-                ? validFontNames[fontSelectorIndex] : null;
-
             logStyle = new GUIStyle(GUI.skin.label)
             {
                 richText = true,
@@ -437,9 +458,7 @@ namespace malafein.UnityLogViewer
                 normal = { textColor = Color.white },
                 padding = new RectOffset(4, 4, 2, 2),
                 margin = new RectOffset(0, 0, 0, 0),
-                font = string.IsNullOrEmpty(selectedFont)
-                    ? null
-                    : Font.CreateDynamicFontFromOSFont(selectedFont, 13)
+                font = validFonts[fontSelectorIndex]
             };
 
             lineHeight = logStyle.CalcSize(new GUIContent("Ag")).y;
@@ -456,6 +475,28 @@ namespace malafein.UnityLogViewer
                 fontSize = 12,
                 alignment = TextAnchor.MiddleCenter
             };
+
+            fontRowTexture = MakeSolidTexture(new Color32(38, 38, 38, 255));
+            fontRowHoverTexture = MakeSolidTexture(new Color32(70, 70, 70, 255));
+            fontRowStyle = new GUIStyle
+            {
+                normal = { background = fontRowTexture },
+                hover = { background = fontRowHoverTexture },
+                active = { background = fontRowHoverTexture },
+                margin = new RectOffset(0, 0, 1, 1)
+            };
+            fontNameStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = Color.white },
+                padding = new RectOffset(8, 4, 0, 0)
+            };
+            fontSampleStyles.Clear();
+            for (int i = 0; i < validFonts.Count; i++)
+            {
+                fontSampleStyles.Add(new GUIStyle(fontNameStyle) { font = validFonts[i] });
+            }
 
             pinnedWindowStyle = new GUIStyle(GUI.skin.box)
             {
@@ -611,9 +652,8 @@ namespace malafein.UnityLogViewer
         private void ApplyFont(int index)
         {
             fontSelectorIndex = index;
-            string name = index > 0 && index < validFontNames.Count ? validFontNames[index] : null;
-            Plugin.FontName.Value = name ?? "";
-            logStyle.font = string.IsNullOrEmpty(name) ? null : Font.CreateDynamicFontFromOSFont(name, 13);
+            Plugin.FontName.Value = validFontNames[index];
+            logStyle.font = validFonts[index];
             lineHeight = logStyle.CalcSize(new GUIContent("Ag")).y;
             renderDirty = true;
         }
@@ -704,14 +744,27 @@ namespace malafein.UnityLogViewer
 
         private void DrawFontList(float viewHeight)
         {
+            // BackgroundOpacity tints every control; the rows stay opaque.
+            Color prevBg = GUI.backgroundColor;
+            GUI.backgroundColor = Color.white;
+
+            // Whole pixels: a fractional height left the 1px gaps between rows on every other row.
+            float rowHeight = Mathf.Round(Mathf.Max(22f, lineHeight + 4f));
             fontListScrollPos = GUILayout.BeginScrollView(fontListScrollPos, GUILayout.Height(viewHeight));
             for (int i = 0; i < validFontNames.Count; i++)
             {
-                string label = i == 0 ? "(default)" : validFontNames[i];
-                if (GUILayout.Button(label, GUILayout.ExpandWidth(true)))
+                Rect row = GUILayoutUtility.GetRect(0f, rowHeight, fontRowStyle, GUILayout.ExpandWidth(true));
+                if (GUI.Button(row, GUIContent.none, fontRowStyle))
                     pendingFontIndex = i;
+
+                Rect nameRect = new Rect(row.x, row.y, Mathf.Min(220f, row.width * 0.4f), row.height);
+                Rect sampleRect = new Rect(nameRect.xMax, row.y, row.width - nameRect.width, row.height);
+                GUI.Label(nameRect, i == 0 ? "(default)" : validFontNames[i], fontNameStyle);
+                GUI.Label(sampleRect, FontSample, fontSampleStyles[i]);
             }
             GUILayout.EndScrollView();
+
+            GUI.backgroundColor = prevBg;
         }
 
         private void HandleResize()
@@ -748,6 +801,8 @@ namespace malafein.UnityLogViewer
         {
             BepInEx.Logging.Logger.Listeners.Remove(this);
             if (bgTexture != null) Destroy(bgTexture);
+            if (fontRowTexture != null) Destroy(fontRowTexture);
+            if (fontRowHoverTexture != null) Destroy(fontRowHoverTexture);
         }
     }
 }
