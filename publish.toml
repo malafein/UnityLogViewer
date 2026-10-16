@@ -1,0 +1,16 @@
+# Where publish.sh publishes this mod (see tools/publish.py).
+
+[github]
+repo = "malafein/UnityLogViewer"
+
+[thunderstore]
+namespace = "malafein"
+
+[thunderstore.categories]
+valheim = ["utility", "mods", "ai-generated", "tools", "client-side"]
+peak = ["client", "mods", "tools"]
+
+[nexus]
+game = "valheim"
+mod = 3274
+display_name = "UnityLogViewer"
